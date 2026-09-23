@@ -100,10 +100,10 @@ test('daily clock advances without new source rows; changed rules are recalculat
     await env.saveDecision(ws, { task_key: 'custom:call', title: 'Call supplier', status: 'accepted', action_date: '2026-08-31', note: 'Ask for Tuesday delivery', owner: 'Amir' });
     await upsertRows(env.browser, ws, 'Calendar', 'entry_id', [{ entry_id: 'meeting', date: '2026-09-01', title: 'Team planning', detail: 'Discuss September targets', deleted: 'FALSE' }]);
     let prompt = '', logs = [];
-    const result = await runAi({ credentials: env.credentials, workspaceId: ws, apiKey: 'test', log: line => logs.push(line), clientFactory: () => ({ messages: { create: async p => {
-      prompt = p.messages[0].content;
-      return { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ headline: 'PRIVATE CUSTOMER BRIEF', summary: 'Plan the week.', priorities: [], watch_items: [], data_caveats: [] }) }], usage: {} };
-    } } }) });
+    const result = await runAi({ credentials: env.credentials, workspaceId: ws, apiKey: 'test', log: line => logs.push(line), clientFactory: () => ({ generateContent: async p => {
+      prompt = p.contents[0].parts[0].text;
+      return { candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ headline: 'PRIVATE CUSTOMER BRIEF', summary: 'Plan the week.', priorities: [], watch_items: [], data_caveats: [] }) }] } }] };
+    } }) });
     assert.equal(result.status, 'success');
     assert.match(prompt, /Team planning/); assert.match(prompt, /Ask for Tuesday delivery/);
     assert.match(prompt, /data as of 2026-08-30/); assert.match(prompt, /Payment PDF: data as of unknown/);

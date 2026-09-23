@@ -1,4 +1,4 @@
-// The canonical record model shared by the onboarding skill, the importer and the
+// The canonical record model shared by Business setup, the importer and the
 // dashboard. A student's spreadsheet never has to use these names: the setup
 // package maps their headers onto these fields. Types drive parsing/validation;
 // nothing here is executable configuration.

@@ -1,13 +1,14 @@
 # Setup package contract (v1.0)
 
-The **setup package** is the one JSON document shared by the Claude onboarding skill
-(which produces it) and the dashboard application (which validates and consumes it).
+The **setup package** is the one JSON document that the dashboard's Business setup
+writes after the owner reviews a source, and that the worker validates and consumes.
+(Until 1.1.0 a Claude onboarding skill produced it; that skill is retired.)
 It is configuration, not code: headers, meanings, allowed values, policies chosen from a
 fixed catalogue. Nothing in it is executed.
 
 - Schema (single source of truth): [`../app/shared/setup-package.schema.json`](../app/shared/setup-package.schema.json)
 - Validator used by the app and worker: `app/shared/package.mjs` (`validatePackage`)
-- Mirror validator shipped in the skill: `skill/business-dashboard-onboarding/scripts/validate_package.py`
+- Former mirror validator in the retired skill: `skill/business-dashboard-onboarding/scripts/validate_package.py`
 - Examples: [`examples/`](examples/) — BetterSpace B2C, BetterSpace B2B, Demo Physio Studio (service, no stock)
 
 ## Top-level sections

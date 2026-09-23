@@ -2,39 +2,49 @@
 
 ## First setup
 
-Use one onboarding conversation with representative samples from every source.
-Decide which source owns each kind of record. Version 1 supports one table each for
-customers, sales/orders/jobs, payments and stock. It does not support arbitrary
-business document types, multiple sales tables, or supplier invoices as customer
-payments. Unsupported documents must be identified before students start setup.
+Every source is added in **Settings → Business setup**, one at a time: prepare → run
+Import data → review → activate. Decide which source owns each kind of record. This
+release supports one table each for customers, sales/orders/jobs, payments and stock.
+It does not support arbitrary business document types, multiple sales tables, or
+supplier invoices as customer payments. Unsupported documents must be identified before
+students start setup.
 
-For example: Sales + Customers in live Google Sheets, Payments from a reviewed PDF,
-and Stock from a local Excel. The setup includes three source IDs; file sources use
-`manual_package`. Their reviewed records are saved in the private Workspace Sheet.
-The original Excel/PDF is not uploaded to GitHub or stored by the dashboard.
+For example: Sales + Customers in a live Google Sheet, Payments from a text-based PDF,
+and Stock from a local Excel or CSV. The setup then has three sources; file sources use
+`manual_package`. The browser reads the file; only the extracted rows (or, for PDF/DOCX,
+the extracted text and the tables Gemini proposes from it) are saved in the private
+Workspace Sheet. The original file is not uploaded to GitHub or stored by the dashboard.
+
+## What Gemini does, and what it does not
+
+The background worker (Import data workflow, step *Prepare pending source*) sends Gemini
+the business profile and a sample of each table (first 15 rows), or the full extracted
+text of a PDF/DOCX, with the instructions in `prompts/data_mapping.md`. Gemini proposes
+which table is which record type and which column is which field; for documents it also
+copies the records into tables. The proposal is saved as *Ready for review*. Nothing is
+used until the owner reviews it and clicks **Activate source**. Figures are always
+calculated by the application from the activated rows, never by Gemini.
 
 ## When one file changes
 
-1. Open **Data connections** and locate that file source.
-2. Click **Download update recipe**. Attach this and the new file to Claude with the
-   updated onboarding Skill. Say: “Update this saved dashboard source from this file.”
-3. Confirm its data date, row counts/totals and update behaviour with Claude:
-   - **Replace:** complete current snapshot. Removes absent records for this source.
-   - **Append:** additional records. Identical duplicates are skipped; conflicting
-     duplicates are blocked.
-   - **Upsert:** full corrected records matched by stable ID. Keeps absent records.
-4. Download **source-update.json**. Back in that source card, choose it and click
-   **Preview file update**. Check the source, date, mode, before/after counts and
-   removals. Click **Save this source only**.
-5. Run **Import data** from the link in Data connections (or wait for the schedule),
-   then **Reload**. The background worker checks relationships across all sources.
+1. Open **Data connections** → that file's card → **Update this file in Business setup**.
+2. Choose **Source → Update / remap: <that source>** (not *Add a new source*), the new
+   file (XLSX, CSV, text PDF or DOCX — the format may differ from last time) and its
+   *File data as of* date. Click **Prepare source**.
+3. Run **Import data** (link under the button), wait for it to finish, then **Reload**.
+4. **Review detected records**, tick the confirmation, **Validate and preview totals**,
+   compare counts and totals with the file, **Activate source**.
+5. Run **Import data** again, then **Reload**. The worker checks relationships across all
+   sources before replacing the dashboard figures.
 
-Source links and the business setup are not replaced. Other file records remain
-saved, and live Google Sheets continue refreshing. Task decisions and calendar notes
-are preserved by stable IDs. Do not update files while an import is running; if the
-preview becomes out of date, the app asks you to preview again.
+The new file **replaces** that source's saved records completely: records missing from
+the new file are removed for that source. Use a complete current export, not a file of
+today's additions only. (1.1.0's append and corrected-record modes are not offered in
+the dashboard in this release.) Other sources, Sheet links, task decisions and calendar
+notes are kept. Do not activate while an import is running; if the source changed after
+the preview, the app asks you to prepare it again.
 
-“Saved” means the file records are ready for the next import. It does not mean the
+“Activated” means the file records are ready for the next import. It does not mean the
 combined dashboard has been refreshed yet. If combined validation fails, inspect
 Data connections and correct the file; the worker does not silently drop records.
 If a snapshot write is interrupted, figures and AI are blocked until a successful
@@ -77,6 +87,8 @@ PDF/Excel files remain wherever the student maintains them.
 
 ## Current verification boundary
 
-Mixed-source and recovery checks use a simulated Google API and mocked Claude calls.
-A fresh Google OAuth/Sheets installation, actual GitHub scheduled run, paid AI call,
-and the updated Skill in Claude still require instructor testing before distribution.
+Mixed-source and recovery checks use a simulated Google API and a local stand-in for
+the Gemini endpoint. The browser walkthrough (Sheet + text PDF + CSV, then an XLSX
+replacement) used the real file readers. A fresh Google OAuth/Sheets installation, an
+actual GitHub scheduled run, and real Gemini calls (mapping quality, PDF extraction
+accuracy, free-tier quota) still require instructor testing before distribution.

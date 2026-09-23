@@ -10,6 +10,7 @@
 import { readFileSync, appendFileSync } from 'node:fs';
 import { parseServiceAccount } from './google-auth.mjs';
 import { runImport, ImportError, SCHEMA } from './importer.mjs';
+import { runOnboarding } from './onboarding.mjs';
 import { runAi, DEFAULT_MODEL } from './ai.mjs';
 import { runInstallCheck } from './install-check.mjs';
 import { validatePackage } from '../app/shared/package.mjs';
@@ -42,10 +43,20 @@ async function main() {
     process.exitCode = v.ok ? 0 : 1;
     return;
   }
+  // The hourly schedule starts as soon as a repository is created from the template. Until
+  // the owner has added the keys, scheduled runs finish quietly instead of failing, so
+  // GitHub does not e-mail "Run failed" every hour during installation. Manual runs still
+  // report missing secrets.
+  const scheduled = flag('--scheduled') || process.env.GITHUB_EVENT_NAME === 'schedule';
+  if (scheduled && ['setup', 'import'].includes(command) && (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON || !(process.env.DASHBOARD_WORKSPACE_ID || '').trim())) {
+    if (command === 'import') importOutput('skipped');
+    console.log('Scheduled run skipped: installation not finished (GOOGLE_SERVICE_ACCOUNT_JSON or DASHBOARD_WORKSPACE_ID is not set yet).');
+    return;
+  }
   const credentials = parseServiceAccount(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
   const workspaceId = (process.env.DASHBOARD_WORKSPACE_ID || '').trim();
   if (command === 'install-check') {
-    const report = await runInstallCheck({ credentials, workspaceId, runId, aiKeyPresent: !!process.env.ANTHROPIC_API_KEY });
+    const report = await runInstallCheck({ credentials, workspaceId, runId, aiKeyPresent: !!process.env.GEMINI_API_KEY });
     const lines = ['## Install check', '', '| Check | Result | Detail |', '|---|---|---|'];
     for (const c of report.checks) { lines.push(`| ${c.name} | ${c.ok ? '✅' : '❌'} | ${c.detail.replace(/\|/g, '\\|')} |`); console.log(`${c.ok ? 'PASS' : 'FAIL'} ${c.name}${c.detail ? ' — ' + c.detail : ''}`); }
     lines.push('', report.ok ? '**Install check passed.**' : '**Install check found problems.** Fix the ❌ rows and run again.');
@@ -55,6 +66,11 @@ async function main() {
     return;
   }
   if (!workspaceId) throw new Error('DASHBOARD_WORKSPACE_ID secret is not set.');
+  if (command === 'setup') {
+    const result = await runOnboarding({ credentials, workspaceId, apiKey: process.env.GEMINI_API_KEY || '', model: process.env.AI_MODEL || DEFAULT_MODEL });
+    console.log('Source preparation: ' + result.status + '. Review Business setup in your private dashboard.');
+    return;
+  }
   if (command === 'import') {
     importOutput('skipped');
     if (flag('--scheduled')) {
@@ -78,7 +94,7 @@ async function main() {
   if (command === 'ai') {
     const mode = flag('--mode') || (process.env.AI_AUTO === 'off' ? 'requests' : 'after_import');
     const model = (process.env.AI_MODEL || DEFAULT_MODEL).trim();
-    const result = await runAi({ credentials, workspaceId, apiKey: process.env.ANTHROPIC_API_KEY || '', model, mode, runId, log: m => console.log(m) });
+    const result = await runAi({ credentials, workspaceId, apiKey: process.env.GEMINI_API_KEY || '', model, mode, runId, log: m => console.log(m) });
     summary(['## AI brief', '', `**${result.status}** — Open AI insights in your dashboard for private results and error details.`]);
     process.exitCode = result.status === 'failed' ? 1 : 0;
     return;

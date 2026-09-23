@@ -1,5 +1,3 @@
-> Candidate correction: backups include reviewed file records stored in Settings. Treat them as private business data. They exclude rebuilt Data_* snapshots and keys.
-
 # Backup, restore and updates
 
 ## What lives where
@@ -7,7 +5,7 @@
 | Item | Where | Backed up by |
 |---|---|---|
 | Original records | Your source Google Sheets / files | You (Google Drive version history) |
-| Setup package, source links, service-account e-mail | Dashboard Workspace › `Settings`, `Sources` | Export backup |
+| Business profile, setup package, source links, saved file records, service-account e-mail | Dashboard Workspace › `Settings`, `Sources` | Export backup |
 | Task decisions, calendar notes, AI requests | Workspace › `Task_Decisions`, `Calendar`, `AI_Requests` | Export backup |
 | Imported snapshots, metrics, suggestions, AI results, logs | Workspace importer/worker tabs | Not needed — rebuilt by the next import (AI results are regenerated on request) |
 | Application code | Your GitHub repository | GitHub |
@@ -17,8 +15,9 @@ Google Drive also keeps version history of the workspace workbook (File › Vers
 
 ## Export a backup
 
-Dashboard › **Settings › Export backup** → `dashboard-backup-<date>.json`. It contains no
-source records and no keys. Keep it with your other private files.
+Dashboard › **Settings › Export backup** → `dashboard-backup-<date>.json`. It includes the
+records saved from local files (Excel/CSV/PDF/DOCX sources), so treat it as private
+business data. It excludes rebuilt `Data_*` snapshots and all keys.
 
 ## Restore
 
@@ -37,7 +36,8 @@ install check.
 
 ## Apply a template update
 
-1. Read the release notes the instructor publishes.
+1. Read the release notes the instructor publishes. Moving from 1.1.0 to 1.2.0 needs a
+   fresh installation (see the release notes); later updates use the steps below.
 2. GitHub › **Actions › 5 · Update from template › Run workflow** → template repository
    and release tag (as announced) → Run.
 3. If the summary lists workflow files that differ, open each named file in the template

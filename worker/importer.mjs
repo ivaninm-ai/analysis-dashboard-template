@@ -139,7 +139,7 @@ export async function runImport({ credentials, workspaceId, fetchFn, now = Date.
   };
   try {
     const { pkg, settings } = await loadSetup(ws, workspaceId);
-    if (!pkg) return finish('no_setup', 'No setup package has been imported yet. Use the onboarding skill, then Settings > Import setup package.');
+    if (!pkg) return finish('no_setup', 'No business setup yet. Open Settings > Business setup, prepare and review a source, then activate it.');
     const sources = await loadBindings(ws, workspaceId, pkg);
     const read = await readSources({ sourcesClient, ws, workspaceId, pkg, sources, settings });
     if (read.errors.length) return finish('failed', `Source read failed; the last good data is kept. ${read.errors.join(' ')}`, { details: { errors: read.errors } });

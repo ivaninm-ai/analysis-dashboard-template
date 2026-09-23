@@ -195,8 +195,11 @@ test('install check reports each step without printing data, and re-adds a delet
   const info = await env.browser.getSpreadsheet(ws);
   const cal = info.sheets.find(s => s.title === 'Calendar');
   await env.browser.batchUpdate(ws, [{ deleteSheet: { sheetId: cal.sheetId } }]);
-  const report = await runInstallCheck({ credentials: env.credentials, workspaceId: ws, runId: 'ic1', aiKeyPresent: false });
+  const report = await runInstallCheck({ credentials: env.credentials, workspaceId: ws, runId: 'ic1', aiKeyPresent: true });
   assert.equal(report.ok, true, JSON.stringify(report.checks.filter(c => !c.ok)));
+  const noKey = await runInstallCheck({ credentials: env.credentials, workspaceId: ws, runId: 'ic_nokey', aiKeyPresent: false });
+  assert.equal(noKey.ok, false, 'Business setup needs Gemini, so a missing key fails the check');
+  assert.ok(noKey.checks.some(c => c.name === 'GEMINI_API_KEY secret present' && !c.ok));
   assert.ok(report.checks.some(c => c.name.startsWith('Missing tabs added') && c.detail === 'Calendar'));
   assert.ok(report.checks.some(c => c.name === 'Source "BetterSpace B2B" readable as Viewer' && c.ok));
   assert.equal((await env.read(ws, 'Task_Decisions')).length, 1, 'decisions preserved through the migration');

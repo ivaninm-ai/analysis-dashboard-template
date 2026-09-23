@@ -40,3 +40,28 @@ test('CLI emits skipped/success/failed outputs and keeps source records out of p
     rmdirSync(dir);
   }
 });
+
+test('before the keys are added, scheduled runs finish quietly; manual runs still report the missing secret', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'dashboard-fresh-'));
+  const out = path.join(dir, 'output.txt');
+  const base = { ...process.env, GITHUB_OUTPUT: out };
+  for (const key of ['GOOGLE_SERVICE_ACCOUNT_JSON', 'DASHBOARD_WORKSPACE_ID', 'GITHUB_EVENT_NAME']) delete base[key];
+  const run = (args, env = {}) => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['worker/run.mjs', ...args], { cwd: ROOT, env: { ...base, ...env } });
+    let stdout = ''; child.stdout.on('data', d => { stdout += d; }); child.stderr.on('data', d => { stdout += d; });
+    child.on('error', reject); child.on('close', code => resolve({ code, stdout }));
+  });
+  try {
+    const scheduledImport = await run(['import', '--scheduled']);
+    assert.equal(scheduledImport.code, 0, scheduledImport.stdout);
+    assert.match(readFileSync(out, 'utf8'), /import_status=skipped/);
+    const scheduledSetup = await run(['setup'], { GITHUB_EVENT_NAME: 'schedule' });
+    assert.equal(scheduledSetup.code, 0, scheduledSetup.stdout);
+    const manual = await run(['import']);
+    assert.equal(manual.code, 1);
+    assert.match(manual.stdout, /GOOGLE_SERVICE_ACCOUNT_JSON is missing/);
+  } finally {
+    if (existsSync(out)) unlinkSync(out);
+    rmdirSync(dir);
+  }
+});

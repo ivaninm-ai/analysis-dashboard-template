@@ -1,7 +1,7 @@
 // Setup-package validation: a small JSON-schema subset validator plus semantic
 // checks against the canonical model. The app refuses to touch workspace data
-// until a package passes both. The same rules are mirrored by the skill's
-// validate_package.py so students see the same messages in Claude and in the app.
+// until a package passes both. Business setup runs the same validation before it
+// saves, so the owner sees these messages at review time.
 
 import { ENTITIES, TASK_RULES, MODULES } from './model.mjs';
 import { isIsoDate } from './dates.mjs';

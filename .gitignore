@@ -7,3 +7,5 @@ node_modules/
 test/.state/
 test/sim/output/
 app/config.local.json
+
+app/vendor/

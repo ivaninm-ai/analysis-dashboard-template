@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Runs a worker command against the simulation server started by
-// `npm run fake-google`. Usage: node test/sim/worker.mjs <import|ai|install-check> <workspaceId> [--day day2]
+// `npm run fake-google`. Usage: node test/sim/worker.mjs <setup|import|ai|install-check> <workspaceId> [--day day2]
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +18,6 @@ if (dayIdx >= 0) {
   console.log(`source workbook replaced with ${sim.business} ${day}: ${r.status}`);
   if (!command) process.exit(0);
 }
-const env = { ...process.env, GOOGLE_API_BASE: base, GOOGLE_TOKEN_URL: `${base}/token`, GOOGLE_SERVICE_ACCOUNT_JSON: sa, DASHBOARD_WORKSPACE_ID: workspaceId || '', ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '' };
+const env = { ...process.env, GOOGLE_API_BASE: base, GOOGLE_TOKEN_URL: `${base}/token`, GOOGLE_SERVICE_ACCOUNT_JSON: sa, DASHBOARD_WORKSPACE_ID: workspaceId || '', GEMINI_API_KEY: process.env.GEMINI_API_KEY || '' };
 const r = spawnSync(process.execPath, [path.join(here, '../../worker/run.mjs'), command], { env, stdio: 'inherit' });
 process.exit(r.status ?? 1);

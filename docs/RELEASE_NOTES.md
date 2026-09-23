@@ -1,5 +1,53 @@
 # Release notes
 
+## 1.2.0-rc.1 — local candidate, 23 September 2026
+
+**Students no longer use Claude.** Setup happens inside the dashboard; background AI is
+Gemini, run by the student's own GitHub Actions worker.
+
+- **Business setup** (Settings): business profile (name, type, description, brief
+  language, currency, timezone, AI priorities), AI data setting and report-date rule,
+  then one source at a time: live Google Sheet or local XLSX / CSV / text PDF / DOCX.
+  *Prepare source* queues a request; the *Import data* workflow asks Gemini for a
+  proposal; the owner reviews row meanings, column choices, date format and statuses,
+  previews counts/totals and clicks *Activate source*. Nothing is used before activation.
+  Replaces the onboarding Skill ZIP, the setup-package JSON import and the
+  source-update.json route.
+- **Gemini instead of Anthropic**: secret `GEMINI_API_KEY` (Google AI Studio), default
+  model `gemini-3.5-flash-lite`, key sent only in the `x-goog-api-key` header by the
+  worker. Instructions live in `prompts/data_mapping.md` and `prompts/daily_brief.md`.
+  The brief follows the chosen language. Quota/key/model errors are explained; figures
+  keep updating when AI fails.
+- **AI data setting**: AI calls are refused until the owner chooses *synthetic practice
+  records (free tier)* or *real records (billing-enabled project)*; Google's unpaid tier
+  must not receive personal or confidential data.
+- **Local files** are read in the browser (read-excel-file, Papa Parse, pdf.js, mammoth),
+  bundled at publish time by `npm run build` into `app/vendor/` (not committed). Limits:
+  10 MB, 12 sheets, 5,000 rows per table, 50 PDF pages, 80,000 text characters; scanned
+  PDFs are rejected. A file is replaced under its existing source (*Update / remap*);
+  replacement is whole-file only — 1.1.0's append and corrected-record modes are not
+  offered in the dashboard.
+- Install check now fails when `GEMINI_API_KEY` is missing (setup cannot work without it).
+- Workflows changed: `import.yml` (new *Prepare pending source* step, Gemini key),
+  `ai.yml`, `install-check.yml`, `deploy-pages.yml` (`npm ci` + `npm run build`),
+  `tests.yml` (build before test), `update-template.yml` (copies `prompts/`, tag default).
+- Fixed while finishing this candidate: every PDF failed in the browser
+  (`destroy is not a function` with pdf.js 6); the Report date choice reset to *Today*
+  after *Save business profile* before the first activation; preview totals are now
+  labelled as raw column sums; order-status fields appear only when a sales table is
+  selected; the post-activation banner no longer points to the old connection step;
+  scheduled runs finish quietly until the keys are added, so a new repository no longer
+  e-mails "Run failed" every hour during installation (manual runs still report it).
+- **Upgrade:** installing 1.2.0 over 1.1.0 with *5 · Update from template* is not
+  supported (the old workflow does not copy `prompts/`; six workflow files changed).
+  Install fresh, then restore a backup.
+- Verified locally: 48 automated tests (simulated Google API, mocked Gemini) and a
+  browser walkthrough with the real file readers against the simulated Google API and a
+  local Gemini stand-in (Sheet + text PDF + BOM CSV → expected B2B figures; XLSX
+  replacement; quota failure and retry; scanned PDF and .txt rejection). **Not verified:**
+  real Google OAuth/Sheets, GitHub Pages/Actions, and real Gemini calls (mapping quality,
+  PDF extraction accuracy, free-tier quota). No release has been published.
+
 ## 1.1.0-rc.1 — local candidate, 23 September 2026
 
 - Source-specific reviewed file updates: replace / append / full-record upsert, with

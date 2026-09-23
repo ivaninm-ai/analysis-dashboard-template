@@ -1,3 +1,4 @@
+import { renderBusinessSetup } from './setup-ui.js';
 // Business Dashboard — static frontend. Runs entirely in the browser against the
 // student's own Google Sheets with a Google-issued access token (drive.file scope).
 // No keys, no business data and no proxy live on the site. All rendering uses
@@ -13,7 +14,7 @@ import { sourceUpdateRecipe, prepareSourceUpdate, saveSourceUpdate } from './sha
 import { TASK_RULES, ENTITIES } from './shared/model.mjs';
 import { isIsoDate, addDays, monthStart, daysInMonth, formatDate, todayIso, priorMonthSameDays } from './shared/dates.mjs';
 
-const APP_VERSION = '1.1.0-rc.1';
+const APP_VERSION = '1.2.0-rc.1';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const LS_WORKSPACE = 'bd.workspaceId';
 const LS_PREFS = 'bd.prefs';
@@ -284,13 +285,13 @@ function renderBanner() {
   const b = $('#banner'); b.textContent = ''; b.hidden = true; b.className = 'banner';
   const meta = state.ws.meta;
   const badge = $('#data-badge');
-  if (!state.pkg) { badge.textContent = 'no setup'; badge.className = 'badge muted-badge'; b.hidden = false; b.classList.add('info'); add(b, 'No business setup yet. Use the onboarding skill in Claude with a sample of your records, then import the setup package under ', h('a', { href: '#settings' }, 'Settings'), '.'); return; }
-  if (!meta.current_snapshot_id) { badge.textContent = 'no import yet'; badge.className = 'badge warning'; b.hidden = false; b.classList.add('warning'); add(b, 'Setup imported, but no data has been imported yet. Connect your sources under ', h('a', { href: '#connections' }, 'Data connections'), ' and run "Import data" in GitHub Actions.'); return; }
+  if (!state.pkg) { badge.textContent = 'no setup'; badge.className = 'badge muted-badge'; b.hidden = false; b.classList.add('info'); add(b, 'No business setup yet. Connect and review your records in ', h('a', { href: '#settings' }, 'Settings'), '.'); return; }
+  if (!meta.current_snapshot_id) { badge.textContent = 'no import yet'; badge.className = 'badge warning'; b.hidden = false; b.classList.add('warning'); add(b, 'Business setup is saved, but no data has been imported yet. Run "Import data" in GitHub Actions (link under ', h('a', { href: '#connections' }, 'Data connections'), '), then press Reload.'); return; }
   const status = String(meta.last_import_status || '');
   if (status === 'failed') { badge.textContent = 'stale — last import failed'; badge.className = 'badge critical'; b.hidden = false; b.classList.add('critical'); add(b, `The last import failed and the dashboard shows the previous snapshot (${formatDate(meta.current_reporting_date)}). ${String(meta.last_import_message || '')} `, h('a', { href: '#connections' }, 'Details')); return; }
   if (status === 'writing') { badge.textContent = 'import in progress'; badge.className = 'badge warning'; b.hidden = false; b.classList.add('warning'); add(b, 'An import is writing to the workspace right now. Reload in a minute.'); return; }
   badge.textContent = `data as of ${formatDate(meta.current_reporting_date)}`; badge.className = 'badge good';
-  if (state.pkg.confirmation?.state !== 'confirmed') { b.hidden = false; b.classList.add('warning'); add(b, 'The setup package is a draft with open questions. Figures are calculated from the draft mapping; confirm it in Claude and re-import.'); }
+  if (state.pkg.confirmation?.state !== 'confirmed') { b.hidden = false; b.classList.add('warning'); add(b, 'The setup package is a draft with open questions. Figures are calculated from the draft mapping; review the source in Business setup.'); }
 }
 
 function navigate(page) {
@@ -762,7 +763,7 @@ function renderConnections() {
   const sources = state.pkg?.sources || [];
   const bound = new Map(state.ws.sources.map(s => [String(s.source_id), s]));
   const card = h('div', { class: 'card' }, t('h2', 'Sources'));
-  if (!sources.length) add(card, t('p', 'Import a setup package first (Settings). It lists the sources your mapping expects.', 'muted'));
+  if (!sources.length) add(card, h('a', { class: 'btn primary', href: '#settings' }, 'Start Business setup'));
   for (const s of sources) {
     const b = bound.get(s.source_id) || {};
     if (s.kind === 'manual_package') { add(card, manualSourceCard(s)); continue; }
@@ -795,35 +796,10 @@ function downloadJson(value, name) {
 
 function manualSourceCard(source) {
   const meta = parseJsonCell(state.ws.settings[`source_meta.${source.source_id}`], {});
-  const imported = parseJsonCell(state.ws.metrics.coverage, {}).sources?.find(s => s.source_id === source.source_id);
-  const pending = meta.uploaded_at && meta.uploaded_at !== imported?.uploaded_at;
-  const tables = state.pkg.tables.filter(t => t.source_id === source.source_id);
-  const ready = tables.every(t => !!state.ws.settings[`manual_rows.${t.table_id}`]);
-  const file = h('input', { type: 'file', accept: '.json,application/json', 'aria-label': `Update ${source.label || source.source_id}` });
-  return h('div', { style: 'padding:12px 0;border-bottom:1px solid var(--grid)' },
-    h('div', { class: 'row' }, t('b', source.label || source.source_id), h('span', { class: `badge ${ready ? 'good' : 'warning'}` }, ready ? 'saved file records' : 'needs file records')),
-    t('p', `Data as of: ${meta.data_as_of || 'not supplied'} · Uploaded: ${meta.uploaded_at ? new Date(meta.uploaded_at).toLocaleString() : 'not recorded'}${meta.file_name ? ' · ' + meta.file_name : ''}`, 'small muted'),
-    pending ? t('p', 'Saved file update is waiting for Import data. Displayed figures still use the previous imported snapshot.', 'small warn') : null,
-    t('p', 'Download the recipe and attach it with the new Excel, CSV, PDF or DOCX to Claude. Import the reviewed source-update.json here. Only this source changes; the original file is not stored.', 'small'),
-    h('div', { class: 'row' }, h('button', { class: 'btn small', onclick: () => downloadJson(sourceUpdateRecipe(state.pkg, source.source_id), 'source-recipe.json') }, 'Download update recipe'), file,
-      h('button', { class: 'btn small primary', onclick: async () => {
-        try {
-          if (!file.files?.[0]) throw new Error('Choose the source-update.json returned by Claude.');
-          if (file.files[0].size > 10000000) throw new Error('This file is too large (maximum 10 MB).');
-          const update = JSON.parse(await file.files[0].text());
-          if (update.source_id !== source.source_id) throw new Error('This file belongs to a different source. Choose its matching source card.');
-          const expectedSettings = { ...state.ws.settings };
-          const result = prepareSourceUpdate(state.pkg, expectedSettings, update);
-          const description = { replace: 'Replace the complete saved snapshot for this source', append: 'Add new records; skip identical duplicates', upsert: 'Update full records by ID and add new ones' }[result.mode];
-          const body = h('div', {}, t('p', description), t('p', `File: ${update.file_name} · data as of ${update.data_as_of}`),
-            h('ul', {}, ...result.preview.map(p => h('li', {}, `${p.entity}: ${p.before} → ${p.after} records; ${p.removed} removed; ${p.skipped} identical duplicates skipped`))),
-            t('p', 'Other sources, tasks and calendar notes are kept. After saving, run Import data to validate the combined data and refresh the dashboard.'));
-          modal('Preview file update', body, { actions: [{ label: 'Save this source only', primary: true, onclick: async () => {
-            try { await saveSourceUpdate(state.client, state.ws.id, state.pkg, update, { expectedSettings }); await loadWorkspace({ silent: true }); navigate('connections'); toast('File records saved. Run Import data to refresh the dashboard.'); }
-            catch (e) { toast(e.message, { error: true }); return true; }
-          } }] });
-        } catch (e) { toast(e.message, { error: true, ms: 8000 }); }
-      } }, 'Preview file update')));
+  return h('div', { class: 'card' }, t('h3', source.label || source.source_id),
+    t('p', `File records as of ${meta.data_as_of || 'unknown'} · ${meta.file_name || ''}`, 'small'),
+    t('p', 'To replace this file, open Business setup, select this existing source, then choose the new file. Review and activate it, then run Import data. Other sources are kept.', 'small'),
+    h('a', { class: 'btn', href: '#settings' }, 'Update this file in Business setup'));
 }
 
 // ---------------------------------------------------------------------------- settings
@@ -837,12 +813,10 @@ function renderSettings() {
       t('h3', 'Task rules'), h('ul', { class: 'list small' }, ...(pkg.policies.tasks || []).map(r => h('li', {}, `${TASK_RULES[r.rule]?.title || r.rule}: ${r.enabled === false ? 'off' : 'on'}${r.params ? ' ' + JSON.stringify(r.params) : ''}${r.note ? ' — ' + r.note : ''}`))),
       pkg.meanings?.length ? h('div', {}, t('h3', 'Confirmed meanings'), h('ul', { class: 'list small' }, ...pkg.meanings.map(m => h('li', {}, h('b', {}, m.field), `: ${m.meaning} (${m.basis || 'stated'})`)))) : null));
   }
-  const file = h('input', { type: 'file', accept: '.json,application/json' });
-  const paste = h('textarea', { placeholder: 'or paste the setup package JSON here' });
-  add(root, h('div', { class: 'card' }, t('h2', pkg ? 'Import a new or remapped setup package' : 'Import your setup package'), t('p', 'Create the package in Claude with the business-dashboard-onboarding skill (upload a sample of your records, answer its questions). The dashboard validates the file and shows a preview before anything is saved. Task decisions are kept because task keys are rule + record ID.', 'small ink2'), h('div', { class: 'stack' }, file, paste, h('button', { class: 'btn primary', onclick: async () => { try { let text = paste.value.trim(); if (file.files?.[0]) text = await file.files[0].text(); if (!text) return toast('Choose a file or paste the JSON', { error: true }); await previewPackage(text); } catch (e) { toast(`Could not validate: ${e.message}`, { error: true, ms: 8000 }); } } }, 'Validate and preview'))));
+  root.prepend(renderBusinessSetup({ h, t, add, state, toast, modal, loadSchema, loadWorkspace, navigate }));
   add(root, h('div', { class: 'card' }, t('h2', 'Backup and restore'), t('p', 'Export your settings, source links, task decisions, calendar notes and AI requests as one JSON file. Saved file records are included and may contain private business data. Rebuilt data snapshots and keys are not included.', 'small ink2'), h('div', { class: 'row' }, h('button', { class: 'btn', onclick: exportBackup }, 'Export backup'), h('button', { class: 'btn', onclick: restoreBackup }, 'Restore from backup…')),
     t('h3', 'Appearance'), h('div', { class: 'row' }, ...[['', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(([v, l]) => h('button', { class: 'btn small', onclick: () => { state.prefs.theme = v; savePrefs(); applyTheme(); } }, l))),
-    t('h3', 'Limits of this release'), h('ul', { class: 'small ink2' }, h('li', {}, `Up to ${LIMITS.records_per_table.toLocaleString()} rows per table and ${LIMITS.tasks.toLocaleString()} task suggestions.`), h('li', {}, 'One editor at a time is assumed for tasks and notes; Google Sheets has no row-level locking.'), h('li', {}, 'Google Sheets sources refresh on the worker schedule. Excel/CSV/PDF/DOCX are imported through a manual package until a cloud-file adapter exists.'), h('li', {}, 'Browser access tokens last about an hour; reconnect when asked. Sign out clears all data from this page.'))));
+    t('h3', 'Limits of this release'), h('ul', { class: 'small ink2' }, h('li', {}, `Up to ${LIMITS.records_per_table.toLocaleString()} rows per table and ${LIMITS.tasks.toLocaleString()} task suggestions.`), h('li', {}, 'One editor at a time is assumed for tasks and notes; Google Sheets has no row-level locking.'), h('li', {}, 'Google Sheets sources refresh on the worker schedule. Local XLSX/CSV/PDF/DOCX files are selected and reviewed in Business setup; replace them there when they change.'), h('li', {}, 'Browser access tokens last about an hour; reconnect when asked. Sign out clears all data from this page.'))));
   return root;
 }
 
@@ -861,7 +835,7 @@ async function previewPackage(text) {
   const prev = state.pkg;
   add(body, t('p', `${pkg.business.name} · ${pkg.business.model || ''} · ${pkg.tables.length} table(s) · ${pkg.confirmation.state}`, ''),
     h('ul', { class: 'small' }, ...pkg.tables.map(tb => h('li', {}, h('b', {}, `${tb.entity}`), ` from "${tb.sheet_name || tb.table_id}" (${tb.row_meaning || 'row meaning not stated'}): ${tb.fields.length} fields, identity by ${tb.identity?.mode || 'source_id'}`))),
-    pkg.validation?.sample ? h('p', { class: 'small' }, `Sample validated in Claude: ${Object.entries(pkg.validation.sample.row_counts || {}).map(([k, n]) => `${n} ${k}`).join(', ')}${pkg.validation.sample.totals ? ' · totals ' + Object.entries(pkg.validation.sample.totals).map(([k, n]) => `${k}=${n}`).join(', ') : ''}. Live totals are checked against these after the first import (Data connections).`) : t('p', 'No sample validation figures included.', 'small muted'),
+    pkg.validation?.sample ? h('p', { class: 'small' }, `Previously validated sample: ${Object.entries(pkg.validation.sample.row_counts || {}).map(([k, n]) => `${n} ${k}`).join(', ')}${pkg.validation.sample.totals ? ' · totals ' + Object.entries(pkg.validation.sample.totals).map(([k, n]) => `${k}=${n}`).join(', ') : ''}. Live totals are checked against these after the first import (Data connections).`) : t('p', 'No sample validation figures included.', 'small muted'),
     v.warnings.length ? h('div', {}, t('h3', 'Warnings'), h('ul', { class: 'check-list small' }, ...v.warnings.map(w => h('li', { class: 'warn' }, w)))) : null,
     pkg.confirmation.open_questions?.length ? h('div', {}, t('h3', 'Open questions'), h('ul', { class: 'small' }, ...pkg.confirmation.open_questions.map(q => h('li', {}, q)))) : null,
     pkg.records ? h('p', { class: 'small' }, `Includes reviewed records: ${Object.entries(pkg.records).map(([k, r]) => `${r.length} ${k}`).join(', ')} (manual source; refresh by importing a new package).`) : null,

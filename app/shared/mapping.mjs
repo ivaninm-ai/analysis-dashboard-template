@@ -105,7 +105,7 @@ export function applyTableMapping(table, rows, pkg) {
     const found = headers.filter(Boolean).map(h => `"${h}"`).join(', ') || '(none)';
     for (const f of missing) {
       issues.push(issue('error', 'missing_header',
-        `Column "${f.header}" (used for ${table.entity}.${f.canonical}) was not found in "${table.sheet_name || table.table_id}". Headers found: ${found}. If the column was renamed, update the mapping with the onboarding skill or Settings > Remap.`,
+        `Column "${f.header}" (used for ${table.entity}.${f.canonical}) was not found in "${table.sheet_name || table.table_id}". Headers found: ${found}. If the column was renamed, review this source in Settings > Business setup.`,
         { table: table.table_id, field: f.canonical, header: f.header, headers_found: headers }));
     }
     return { records, issues };

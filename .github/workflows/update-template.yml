@@ -12,9 +12,9 @@ on:
         required: true
         default: 'ivaninm-ai/analysis-dashboard-template'
       release_tag:
-        description: 'Release tag to apply (for example v1.0.0)'
+        description: 'Release tag to apply (for example v1.2.0-rc.1)'
         required: true
-        default: 'v1.1.0-rc.1'
+        default: 'v1.2.0-rc.1'
 permissions:
   contents: write
 jobs:
@@ -32,7 +32,7 @@ jobs:
       - name: Apply application files only
         run: |
           set -e
-          for d in app worker config docs scripts; do rm -rf "$d"; cp -r ".template/$d" "$d"; done
+          for d in app worker config docs scripts prompts; do rm -rf "$d"; cp -r ".template/$d" "$d"; done
           cp .template/package.json .template/package-lock.json .template/README.md .
           if ! diff -rq .template/.github/workflows .github/workflows > /dev/null; then
             {

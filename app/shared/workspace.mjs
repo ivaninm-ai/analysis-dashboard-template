@@ -22,6 +22,7 @@ export const LIMITS = {
 const dataHeader = entity => [...Object.keys(ENTITIES[entity].fields), 'status_text', '_source'];
 
 export const TABS = {
+  Setup_Result: { owner: 'worker', header: ['key', 'value'] },
   _Workspace: { owner: 'shared', header: ['key', 'value'] },
   Settings: { owner: 'user', header: ['key', 'value', 'updated_at'] },
   Sources: { owner: 'user', header: ['source_id', 'kind', 'spreadsheet_id', 'label', 'refresh', 'updated_at'] },

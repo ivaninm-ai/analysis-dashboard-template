@@ -17,7 +17,7 @@ export function sourceUpdateRecipe(pkg, sourceId) {
 
 export function prepareSourceUpdate(pkg, settings, update, stamp = new Date().toISOString()) {
   const fail = msg => { throw new Error(msg); };
-  if (!update || update.update_version !== '1.0' || update.confirmed !== true) fail('Use a confirmed source-update.json produced with your source recipe.');
+  if (!update || update.update_version !== '1.0' || update.confirmed !== true) fail('Confirm the source update before saving.');
   const allowed = ['update_version', 'source_id', 'mode', 'data_as_of', 'file_name', 'confirmed', 'records'];
   if (Object.keys(update).some(k => !allowed.includes(k))) fail('The update includes unexpected fields. It must contain records for one source only.');
   const source = pkg.sources.find(s => s.source_id === update.source_id);
@@ -57,7 +57,7 @@ export function prepareSourceUpdate(pkg, settings, update, stamp = new Date().to
       for (const rec of nextRecords) {
         const old = existing.get(rec.id);
         if (old && comparable(old) === comparable(rec)) { skipped++; continue; }
-        if (old && update.mode === 'append') fail(`Record ${rec.id} already exists with different values. Use corrected-record update or review the duplicate in Claude.`);
+        if (old && update.mode === 'append') fail(`Record ${rec.id} already exists with different values. Use corrected-record update or review the duplicate in the source.`);
         const row = incoming[rec._row - 1];
         if (old) merged[old._row - 1] = row;
         else merged.push(row);

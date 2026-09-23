@@ -1,4 +1,4 @@
-# Limitations and tested limits (release 1.0.0)
+# Limitations and tested limits (release 1.2.0-rc.1)
 
 **Storage and concurrency**
 - Google Sheets has no transactions or row locks. Writes locate rows by stable key before
@@ -16,13 +16,16 @@
   request limits) may slow imports of several thousand rows.
 
 **Sources**
-- Live refresh: native Google Sheets only. Excel/CSV/PDF/DOCX enter through a manual
-  package (reviewed rows) and refresh through source-specific reviewed JSON updates; see MIXED_SOURCES.md. Drive-hosted
-  Office files and synced folders are not connectors in this release.
+- Live refresh: native Google Sheets only. Local XLSX/CSV/PDF/DOCX files are read in the
+  browser, reviewed in Business setup and replaced there when they change (whole-file
+  replacement only); see MIXED_SOURCES.md. Drive-hosted Office files and synced folders
+  are not connectors in this release.
 - One table per canonical entity; duplicate exports of the same records must not be
   mapped twice. Multi-item orders need one row per order in this release (or an
   order-level export).
-- No OCR; scanned PDFs are flagged by the skill as requiring manual review.
+- No OCR; a PDF page without a text layer is rejected with a message.
+- Every source preparation (including a file replacement) needs one GitHub Actions run
+  before review, and another after activation to refresh figures.
 
 **Authorisation**
 - The browser uses `drive.file`: it can open only workspaces it created for the signed-in
@@ -42,10 +45,21 @@
 - Public repositories have free Actions minutes; the hourly skip run costs seconds.
 
 **AI**
-- One supported provider (Anthropic Messages API). Requires an API key with billing —
-  not included in a Claude subscription. Data sent: business profile, calculated
-  metrics and open task lines (which include customer names from your records). No
-  streaming chat; requests are queued and processed by the worker.
+- One supported provider: the Gemini API (Google AI Studio key in `GEMINI_API_KEY`,
+  default model `gemini-3.5-flash-lite`). The key is required: Business setup uses Gemini
+  to propose column meanings and to extract tables from PDF/DOCX text.
+- Data sent to Gemini: the business profile; for setup, the first 15 rows of each table
+  or the full extracted text of a PDF/DOCX; for the brief, calculated metrics, open task
+  lines (which include customer names), notes and the next 14 days of the calendar.
+- Google's unpaid tier may use submitted content to improve its products and must not
+  receive personal or confidential records. The dashboard blocks AI calls until the owner
+  picks an AI data setting; *synthetic* is for practice data, real private records need a
+  billing-enabled project. The setting records the owner's choice; it cannot verify
+  billing. Free-tier quotas are limited; when exhausted, imports continue and the
+  previous brief stays visible.
+- AI proposals are never used without the owner's review and activation. Figures are
+  always calculated by the application. No streaming chat; requests are queued and
+  processed by the worker.
 - The brief can only reference task keys that exist; anything else is dropped and
   counted in `dropped_references`.
 
@@ -57,9 +71,12 @@
 - Money is displayed with the configured symbol; multi-currency is not supported.
 
 **Template updates**
-- `5 · Update from template` replaces `app/`, `worker/`, `config/`, `docs/`, `scripts/`
-  and package files. GitHub does not allow it to change `.github/workflows/`; changed
-  workflow files must be re-copied by hand (the run summary lists them).
+- `5 · Update from template` replaces `app/`, `worker/`, `config/`, `docs/`, `scripts/`,
+  `prompts/` and package files. GitHub does not allow it to change `.github/workflows/`;
+  changed workflow files must be re-copied by hand (the run summary lists them).
+- Upgrading a 1.1.0 installation to 1.2.0 is not supported through that workflow: 1.1.0's
+  copy of it does not copy `prompts/`, and six workflow files changed. Install 1.2.0
+  fresh and restore a backup.
 - Workspace schema migrations are additive (missing tabs/keys added; nothing cleared).
 
 ## Candidate changes

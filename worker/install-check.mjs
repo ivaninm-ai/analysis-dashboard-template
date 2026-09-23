@@ -30,12 +30,12 @@ export async function runInstallCheck({ credentials, workspaceId, fetchFn, now =
   const { values: meta } = await readKeyValues(ws, workspaceId, '_Workspace');
   check('Current snapshot', true, meta.current_snapshot_id ? `${meta.current_snapshot_id} (reporting ${meta.current_reporting_date})` : 'none yet — run the import after connecting sources');
   let pkg = null;
-  try { ({ pkg } = await loadSetup(ws, workspaceId)); check('Setup package', !!pkg, pkg ? `${pkg.business.name} (${pkg.tables.length} tables, ${pkg.confirmation.state})` : 'not imported yet — use the onboarding skill, then Settings > Import'); }
+  try { ({ pkg } = await loadSetup(ws, workspaceId)); check('Setup package', !!pkg, pkg ? `${pkg.business.name} (${pkg.tables.length} tables, ${pkg.confirmation.state})` : 'not configured yet — complete Settings > Business setup'); }
   catch (e) { check('Setup package', false, e.message); }
   if (pkg) {
     const bindings = await loadBindings(ws, workspaceId, pkg);
     for (const s of bindings) {
-      if (s.kind !== 'google_sheet') { check(`Source "${s.label}"`, true, 'manual package (refresh by re-importing a package)'); continue; }
+      if (s.kind !== 'google_sheet') { check(`Source "${s.label}"`, true, 'saved file records (replace them in Settings > Business setup)'); continue; }
       if (!s.spreadsheet_id) { check(`Source "${s.label}" connected`, false, 'Not connected: paste the Sheet link in Data connections.'); continue; }
       try {
         const info = await sources.getSpreadsheet(s.spreadsheet_id);
@@ -48,7 +48,8 @@ export async function runInstallCheck({ credentials, workspaceId, fetchFn, now =
       }
     }
   }
-  check('AI key present (optional)', true, aiKeyPresent ? 'ANTHROPIC_API_KEY is set' : 'not set — the AI section will show "not configured"');
+  // Business setup prepares every source through Gemini, so the key is required.
+  check('GEMINI_API_KEY secret present', aiKeyPresent, aiKeyPresent ? 'set — used by Business setup and the AI brief' : 'missing — create a key in Google AI Studio and add it under Secrets; Business setup cannot prepare sources without it');
   const dec = await readTable(ws, workspaceId, 'Task_Decisions');
   check('Existing task decisions preserved', true, `${dec.rows.length} decision row(s)`);
   return report;

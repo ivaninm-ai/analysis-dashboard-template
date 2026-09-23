@@ -4,7 +4,7 @@
 // references to unknown tasks are dropped. No real API calls are made.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import Anthropic from '@anthropic-ai/sdk';
+
 import { startFakeEnv, OWNER } from './helpers/fake-env.mjs';
 import { runImport } from '../worker/importer.mjs';
 import { runAi, buildPrompt, sanitiseBrief } from '../worker/ai.mjs';
@@ -22,8 +22,8 @@ test.before(async () => {
 });
 test.after(async () => { await env.close(); });
 
-const fakeClient = (handler) => () => ({ messages: { create: async params => handler(params) } });
-const textResponse = obj => ({ stop_reason: 'end_turn', model: 'claude-opus-5', usage: { input_tokens: 1000, output_tokens: 200 }, content: [{ type: 'text', text: JSON.stringify(obj) }] });
+const fakeClient = (handler) => () => ({ generateContent: async params => handler(params) });
+const textResponse = obj => ({ modelVersion: 'gemini-3.5-flash-lite', usageMetadata: { promptTokenCount: 1000, candidatesTokenCount: 200 }, candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(obj) }] } }] });
 
 test('after_import: writes a complete result with snapshot, model and rule versions; prompt contains only calculated facts', async () => {
   let captured;
@@ -32,17 +32,17 @@ test('after_import: writes a complete result with snapshot, model and rule versi
     return textResponse({ headline: 'RM 30,515 is overdue across 15 orders; BS-001 first.', summary: 'Overdue balances need attention.', priorities: [{ task_key: 'payment_follow_up:BS-001', why: 'RM 4,500 overdue since 29 Aug', suggested_action: 'Mei calls ABC Workspace today' }, { task_key: 'made_up:XYZ', why: 'x', suggested_action: 'y' }], watch_items: ['T001 has no available stock'], data_caveats: ['No supplier lead times in the records'] });
   }) });
   assert.equal(r.status, 'success');
-  assert.equal(captured.model, 'claude-opus-5');
-  assert.equal(captured.output_config.format.type, 'json_schema');
-  assert.match(captured.messages[0].content, /Business: BetterSpace Office Solutions/);
-  assert.match(captured.messages[0].content, /RM 30,515/);
-  assert.match(captured.messages[0].content, /payment_follow_up:BS-001/);
+  assert.equal(captured.model, 'gemini-3.5-flash-lite');
+  assert.equal(captured.generationConfig.responseMimeType, 'application/json');
+  assert.match(captured.contents[0].parts[0].text, /Business: BetterSpace Office Solutions/);
+  assert.match(captured.contents[0].parts[0].text, /RM 30,515/);
+  assert.match(captured.contents[0].parts[0].text, /payment_follow_up:BS-001/);
   assert.doesNotMatch(JSON.stringify(captured), /test-key/, 'the key is never placed in the prompt');
   const results = await env.read(ws, 'AI_Results');
   const complete = results.find(x => x.status === 'complete');
   assert.ok(complete);
   assert.match(String(complete.snapshot_id), /^snap_/);
-  assert.equal(complete.model, 'claude-opus-5');
+  assert.equal(complete.model, 'gemini-3.5-flash-lite');
   assert.match(String(complete.rules_version), /^1\.0\//);
   const content = parseJsonCell(complete.content_json);
   assert.equal(content.priorities.length, 1, 'reference to an unknown task key was dropped');
@@ -52,7 +52,7 @@ test('after_import: writes a complete result with snapshot, model and rule versi
 
 test('provider failure (401) is recorded as failed and metrics are untouched', async () => {
   const before = await env.meta(ws);
-  const r = await runAi({ credentials: env.credentials, workspaceId: ws, apiKey: 'bad', mode: 'after_import', runId: 'ai2', clientFactory: fakeClient(() => { throw new Anthropic.AuthenticationError(401, { error: { message: 'invalid x-api-key' } }, 'invalid x-api-key', new Headers()); }) });
+  const r = await runAi({ credentials: env.credentials, workspaceId: ws, apiKey: 'bad', mode: 'after_import', runId: 'ai2', clientFactory: fakeClient(() => { throw Object.assign(new Error('invalid key'), { status: 401 }); }) });
   assert.equal(r.status, 'failed');
   const results = await env.read(ws, 'AI_Results');
   const failed = results.filter(x => x.result_id.startsWith('ai2')).find(x => x.status === 'failed');
@@ -66,7 +66,7 @@ test('missing key is a clear failed result, not a crash', async () => {
   const r = await runAi({ credentials: env.credentials, workspaceId: ws, apiKey: '', mode: 'after_import', runId: 'ai3' });
   assert.equal(r.status, 'failed');
   const results = await env.read(ws, 'AI_Results');
-  assert.ok(results.some(x => x.result_id.startsWith('ai3') && /ANTHROPIC_API_KEY/.test(String(x.error))));
+  assert.ok(results.some(x => x.result_id.startsWith('ai3') && /GEMINI_API_KEY/.test(String(x.error))));
 });
 
 test('queued request from the dashboard is processed once and linked by request_id', async () => {
