@@ -1,5 +1,6 @@
 // Reconciliation with the BetterSpace answer keys (expected_metrics.json). The
 // fixtures are inputs only; the dashboard code never reads expected_metrics.
+import './helpers/english.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

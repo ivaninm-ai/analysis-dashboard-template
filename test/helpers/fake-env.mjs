@@ -1,5 +1,6 @@
 // Test environment: fake Google server + ephemeral service-account key + helpers
 // that play the browser's role (owner token) and the admin's role (sharing).
+import './english.mjs';
 import { generateKeyPairSync } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';

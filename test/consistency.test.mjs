@@ -1,4 +1,5 @@
 // Guards that keep the skill, the app and the docs on the same contract.
+import './helpers/english.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
