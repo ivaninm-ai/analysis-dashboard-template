@@ -45,7 +45,8 @@ test('before the keys are added, scheduled runs finish quietly; manual runs stil
   const dir = mkdtempSync(path.join(tmpdir(), 'dashboard-fresh-'));
   const out = path.join(dir, 'output.txt');
   const base = { ...process.env, GITHUB_OUTPUT: out };
-  for (const key of ['GOOGLE_SERVICE_ACCOUNT_JSON', 'DASHBOARD_WORKSPACE_ID', 'GITHUB_EVENT_NAME']) delete base[key];
+  // Clear GitHub's own variables too: with GITHUB_STEP_SUMMARY set, the worker prints a generic public message.
+  for (const key of ['GOOGLE_SERVICE_ACCOUNT_JSON', 'DASHBOARD_WORKSPACE_ID', 'GITHUB_EVENT_NAME', 'GITHUB_STEP_SUMMARY', 'GITHUB_ACTIONS']) delete base[key];
   const run = (args, env = {}) => new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['worker/run.mjs', ...args], { cwd: ROOT, env: { ...base, ...env } });
     let stdout = ''; child.stdout.on('data', d => { stdout += d; }); child.stderr.on('data', d => { stdout += d; });
