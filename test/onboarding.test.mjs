@@ -83,3 +83,25 @@ test('worker proposal requires review; activation and replacement preserve decis
     await assert.rejects(saveSetup(env.browser,id,updated,next,settings),/changed|newer/);
   }finally{await env.close();}
 });
+
+test('mapping request sends a strict answer template; a single-sentence or missing notes field is accepted', async () => {
+  let sent;
+  const reply = obj => ({ apiKey: 'x', clientFactory: () => ({ generateContent: async args => { sent = args; return response(obj); } }) });
+  const base = { selections: [structuredClone(selection)], status_map: { pending: [], done: [], excluded: [], blank: 'pending' }, document_tables: [] };
+  const oneNote = await prepareProposal(request(), {}, reply({ ...base, notes: 'Qty looks like units on hand.' }));
+  assert.deepEqual(oneNote.notes, ['Qty looks like units on hand.']);
+  assert.deepEqual(sent.generationConfig.responseJsonSchema.required, ['selections', 'status_map', 'document_tables', 'notes']);
+  assert.equal(sent.generationConfig.responseMimeType, 'application/json');
+  const noNotes = await prepareProposal(request(), {}, reply(base));
+  assert.deepEqual(noNotes.notes, []);
+  assert.equal(noNotes.selections[0].entity, 'stock');
+});
+
+test('a reply in another shape is rejected with the field names it used, never the values', async () => {
+  const other = { apiKey: 'x', clientFactory: () => ({ generateContent: async () => response({ tables: [{ name: 'Stock', sample: 'ABC Workspace Demo Co. RM 4,500' }], note: 'BS-001 overdue' }) }) };
+  const error = await prepareProposal(request(), {}, other).catch(e => e);
+  assert.match(error.message, /invalid proposal \(received tables:list, note:string\)/);
+  assert.doesNotMatch(error.message, /ABC Workspace|4,500|BS-001/);
+  const list = { apiKey: 'x', clientFactory: () => ({ generateContent: async () => response([selection]) }) };
+  await assert.rejects(prepareProposal(request(), {}, list), /received a list/);
+});
