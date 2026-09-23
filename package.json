@@ -1,0 +1,20 @@
+{
+  "name": "business-dashboard-template",
+  "version": "1.1.0-rc.1",
+  "private": true,
+  "type": "module",
+  "description": "Student-owned business dashboard: static frontend on GitHub Pages, GitHub Actions worker, Google Sheets storage. No database service.",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\"",
+    "test:fixtures": "node --test test/fixtures.test.mjs",
+    "check:package": "node worker/run.mjs validate-package",
+    "fake-google": "node test/fake-google/server.mjs",
+    "sim": "node test/sim/run-path.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
