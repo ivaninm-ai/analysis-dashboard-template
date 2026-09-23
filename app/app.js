@@ -15,7 +15,7 @@ import { TASK_RULES, ENTITIES } from './shared/model.mjs';
 import { isIsoDate, addDays, monthStart, daysInMonth, formatDate, todayIso, priorMonthSameDays } from './shared/dates.mjs';
 import { tr, tl, setLocale, intlLocale } from './shared/i18n.mjs';
 
-const APP_VERSION = '1.2.0-rc.3';
+const APP_VERSION = '1.2.0-rc.4';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const LS_WORKSPACE = 'bd.workspaceId';
 const LS_PREFS = 'bd.prefs';
@@ -694,7 +694,7 @@ function renderCalendar() {
     const d = addDays(start, i);
     const other = d.slice(0, 7) !== month.slice(0, 7);
     const cell = h('div', { class: `cal-day ${other ? 'other' : ''} ${d === rd ? 'today' : ''}` }, t('div', String(Number(d.slice(8))), 'd'));
-    for (const it of (byDate.get(d) || []).slice(0, 6)) add(cell, h('span', { class: `cal-item ${it.kind}${it.overdue ? ' overdue' : ''}`, title: it.title, onclick: it.onclick }, it.title));
+    for (const it of (byDate.get(d) || []).slice(0, 6)) add(cell, h('span', { class: `cal-item ${it.kind}${it.overdue ? ' overdue' : ''}`, title: it.title, onclick: it.onclick }, it.overdue ? `⚠ ${it.title}` : it.title));
     if ((byDate.get(d) || []).length > 6) add(cell, t('span', tr('+{0} more', byDate.get(d).length - 6), 'small muted'));
     add(grid, cell);
   }
@@ -835,12 +835,10 @@ function renderSettings() {
   }
   root.prepend(renderBusinessSetup({ h, t, add, state, toast, modal, loadSchema, loadWorkspace, navigate }));
   add(root, h('div', { class: 'card' }, t('h2', tr('Backup and restore')), t('p', tr('Export your settings, source links, task decisions, calendar notes and AI requests as one JSON file. Saved file records are included and may contain private business data. Rebuilt data snapshots and keys are not included.'), 'small ink2'), h('div', { class: 'row' }, h('button', { class: 'btn', onclick: exportBackup }, tl('Export backup')), h('button', { class: 'btn', onclick: restoreBackup }, tl('Restore from backup…'))),
-    t('h3', tr('Appearance')), h('div', { class: 'row' }, ...[['', tr('System')], ['light', tr('Light')], ['dark', tr('Dark')]].map(([v, l]) => h('button', { class: 'btn small', onclick: () => { state.prefs.theme = v; savePrefs(); applyTheme(); } }, l))),
     t('h3', tr('Limits of this release')), h('ul', { class: 'small ink2' }, h('li', {}, tr('Up to {0} rows per table and {1} task suggestions.', LIMITS.records_per_table.toLocaleString(intlLocale()), LIMITS.tasks.toLocaleString(intlLocale()))), h('li', {}, tr('One editor at a time is assumed for tasks and notes; Google Sheets has no row-level locking.')), h('li', {}, tr('Google Sheets sources refresh on the worker schedule. Local XLSX/CSV/PDF/DOCX files are selected and reviewed in Business setup; replace them there when they change.')), h('li', {}, tr('Browser access tokens last about an hour; reconnect when asked. Sign out clears all data from this page.')))));
   return root;
 }
 
-function applyTheme() { const v = state.prefs.theme || ''; if (v) document.documentElement.setAttribute('data-theme', v); else document.documentElement.removeAttribute('data-theme'); }
 
 let schemaCache = null;
 async function loadSchema() { if (!schemaCache) schemaCache = await (await fetch('./shared/setup-package.schema.json', { cache: 'no-store' })).json(); return schemaCache; }
@@ -906,6 +904,5 @@ function restoreBackup() {
 }
 
 // ---------------------------------------------------------------------------- start
-applyTheme();
 boot();
 void ENTITIES; void priorMonthSameDays; void readKeyValues; void readTable;

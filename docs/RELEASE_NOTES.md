@@ -1,5 +1,22 @@
 # Release notes
 
+## 1.2.0-rc.4 — 23 September 2026
+
+- **Brand design language** (go.chaletteku.com palette): 奶油底 #FAF0E4 page, 卡片白 #FFF8EF
+  cards, 分隔线 #E5D5C0 borders, 深酒红 #5A1A2B headings, figures, primary buttons and the
+  line under the top bar, 古铜金 #B8963E as decoration only (active-menu marker, logo),
+  暖灰棕 for lines. Noto Sans SC for Chinese text.
+- Accessibility adjustments, computed rather than eyeballed: gold is 2.5:1 on cream, so
+  it never carries text; 暖灰棕 #8C7B6B is 3.6:1, so small captions use #766456 (5:1).
+  Chart colours are derived steps (wine #93324B, gold #B08A33, blue #2370B5) that pass
+  the palette validator (lightness, chroma, colour-blind separation, ≥ 3:1 on cards).
+- Status colours stay separate from the brand: green, amber and an orange-red critical
+  (#C2410C) — a brick red was indistinguishable from the wine brand. Calendar: deadlines
+  gold, task dates blue, notes dashed grey, overdue orange-red with ⚠.
+- Light only: the System / Light / Dark switch was removed.
+- App styling only; no workflow or worker changes. Update with *5 · Update from
+  template* → `v1.2.0-rc.4`, then *4 · Publish dashboard*.
+
 ## 1.2.0-rc.3 — 23 September 2026
 
 - **Chinese interface.** The dashboard, the worker's messages, generated task titles and
