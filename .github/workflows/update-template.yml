@@ -10,11 +10,11 @@ on:
       template_repo:
         description: 'Template repository (owner/name)'
         required: true
-        default: 'ivaninm-ai/business-dashboard-template'
+        default: 'ivaninm-ai/analysis-dashboard-template'
       release_tag:
         description: 'Release tag to apply (for example v1.0.0)'
         required: true
-        default: 'v1.0.0'
+        default: 'v1.1.0-rc.1'
 permissions:
   contents: write
 jobs:

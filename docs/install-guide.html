@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<!-- 安装 SOP 的独立 HTML 导出版（1.0.0）。正式指南是 Claude Artifact；这个文件内容相同，供离线/发放使用。不含任何钥匙，也不会向你要钥匙。 -->
+<!-- 安装 SOP 的独立 HTML 导出版（1.1.0-rc.1）。正式指南是 Claude Artifact；这个文件内容相同，供离线/发放使用。不含任何钥匙，也不会向你要钥匙。 -->
 <style>[hidden]{display:none!important} img{max-width:100%}</style>
 </head>
 <body>
@@ -122,6 +122,7 @@ footer { margin-top: 28px; font-size: 13px; color: var(--muted); }
       <a href="#s7" data-step="7"><span class="n">7</span>告诉 AI 你的生意</a>
       <a href="#s8" data-step="8"><span class="n">8</span>导入 · 连接</a>
       <a href="#s9" data-step="9"><span class="n">9</span>验收</a>
+      <a href="#smixed" data-step="mixed"><span class="n">↻</span>更新文件来源</a>
       <a href="#after" data-step="after"><span class="n">✓</span>装好之后</a>
       <div class="progress" id="progress">已完成 0 / 10 个检查点</div>
     </nav>
@@ -131,7 +132,7 @@ footer { margin-top: 28px; font-size: 13px; color: var(--muted); }
         <h2 id="details-h">你的资料</h2>
         <p class="lede" style="font-size:14px">拿到一个就填一个，下面各步会自动帮你拼好要贴的网址和名字。这些资料只存在你这台设备的浏览器里，刷新不会丢。<b>钥匙、密码、JSON 钥匙文件绝对不要填在这里</b>——它们只进 GitHub 的 Secrets（第 3、6 步）。</p>
         <div class="fields">
-          <label class="field"><span>模板仓库（老师会发给你）</span><input id="f-template" placeholder="老师的用户名/business-dashboard-template" autocomplete="off"><span class="hint">格式：用户名/仓库名，GitHub 上显示的那样</span></label>
+          <label class="field"><span>模板仓库（老师会发给你）</span><input id="f-template" placeholder="ivaninm-ai/analysis-dashboard-template" autocomplete="off"><span class="hint">格式：用户名/仓库名，GitHub 上显示的那样</span></label>
           <label class="field"><span>你的 GitHub 用户名</span><input id="f-user" placeholder="例：mei-tan" autocomplete="off"><span class="hint" id="h-user">小写字母、数字、连字符</span></label>
           <label class="field"><span>你要建的仓库名</span><input id="f-repo" value="my-business-dashboard" autocomplete="off"></label>
           <label class="field"><span>OAuth Client ID（第 2 步拿到；不是私密）</span><input id="f-client" placeholder="1234…-abc….apps.googleusercontent.com" autocomplete="off"><span class="hint" id="h-client">结尾是 .apps.googleusercontent.com</span></label>
@@ -317,9 +318,7 @@ Install check found problems</div>
         <div class="checkpoint"><span class="mark">检查</span><label><input type="checkbox" data-check="9"><span>数据改动进来了；我的待办决定经过一次关浏览器、两次更新都还在；没有任何重复。</span></label></div>
       </section>
 
-      <section class="panel" id="after" aria-labelledby="hafter">
-
-      <section class="step" aria-labelledby="hmixed">
+      <section class="step" id="smixed" aria-labelledby="hmixed">
         <h2 id="hmixed">混合来源：只更新某一份 Excel / PDF / DOCX</h2>
         <p>Google Sheet 自动读取；本地文件保留上次确认的记录。原文件不存到网站，整理后的记录存进你自己的 Dashboard Workspace。</p>
         <ol>
@@ -335,7 +334,9 @@ Install check found problems</div>
         <p>日历显示记录中的截止日期、已接受且有日期的待办、以及你自己的备注。完成/忽略/被数据解决的待办不会继续占用行动日历。AI 会读取待办备注和今天起未来 14 天的日历（最多 40 项），不会自动创建外部日历事件。</p>
         <p>首次设置仍只支持客户、订单/工作、收款、库存四类记录；其他文档类型需先确认适用性。此候选版已做本地模拟测试，真实 Google / GitHub / API 安装仍需老师验收。</p>
       </section>
-<h2 id="hafter">装好之后 · 每天只做这几件事</h2>
+
+      <section class="panel" id="after" aria-labelledby="hafter">
+        <h2 id="hafter">装好之后 · 每天只做这几件事</h2>
         <div class="two">
           <div>
             <h3>每天</h3>
